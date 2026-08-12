@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Block Fuel</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <!-- Icône & PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#101018">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background-color: #101018;
+      color: #f7f7fb;
+    }
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 18px 44px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 18px;
+      text-align: center;
+      font-weight: 700;
+    }
+    .group-title {
+      margin-top: 20px;
+      margin-bottom: 8px;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    label {
+      font-size: 15px;
+      opacity: 0.95;
+    }
+    .row {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 14px;
+    }
+
+    input, select {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #3a3a48;
+      background-color: #171725;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    select { font-size: 16px; }
+    input::placeholder { color: #7f7f9a; }
+    input:focus, select:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(10,132,255,0.35);
+    }
+
+    /* bleu = entrées K & Taxi à figer après calcul */
+    .state-edit { border-color: #0a84ff; }
+    /* jaune = variables d'ajustement (ZFW, RFL, Block) */
+    .state-adjust { border-color: #f5c445; background-color: #252020; }
+    /* vert = K & Taxi verrouillés après calcul */
+    .state-locked { border-color: #2ecc71; background-color: #16241b; }
+    /* vert clair = valeurs de résultat */
+    .state-result-value { color: #7fffb0; }
+
+    .state-limited-tow { border-color: #ff9f1a !important; background-color: #2a1e08 !important; }
+    .state-limited-law { border-color: #4ec3ff !important; background-color: #082234 !important; }
+
+    /* violet = bloc Block Fuel avitaillement (mesures sol) */
+    .state-uplift { border-color: #a78bfa; background-color: #1b1730; }
+    /* gris = valeur dérivée, non saisie directement */
+    .state-derived { border-color: #55556a; background-color: #14141f; color: #d8d8ea; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      min-width: 0;
+    }
+    .grid-2 .row { min-width: 0; }
+    .grid-2 input, .grid-2 select { width: 100%; box-sizing: border-box; }
+
+    .buttons { display: flex; gap: 12px; margin-top: 14px; margin-bottom: 20px; }
+    button {
+      flex: 1; padding: 12px 0; border-radius: 12px; border: none;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+    #btnCalc { background-color: #0a84ff; color: #ffffff; }
+    #btnReset { background-color: #2e2e3c; color: #ffffff; }
+
+    .results {
+      margin-top: 10px; padding: 14px 14px 12px; border-radius: 14px;
+      background-color: #181828; border: 1px solid #3b3b4f;
+    }
+    .result-row {
+      display: flex; justify-content: space-between; margin-bottom: 6px;
+      font-size: 18px; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .result-label { opacity: 0.9; }
+    .result-value { font-weight: 700; color: #ffffff; }
+
+    .limit-input {
+      max-width: 140px; padding: 8px 10px; border-radius: 10px;
+      border: 2px solid #ff9f1a; background-color: #2a1e08;
+      color: #ffffff; font-size: 15px; font-weight: 700;
+    }
+    .limit-input-law { border-color: #4ec3ff; background-color: #082234; }
+    .limit-input::placeholder { color: #ffcf80; font-weight: 500; }
+    .limit-input-law::placeholder { color: #a0e3ff; font-weight: 500; }
+    .limit-input-muted { opacity: 0.6; border-style: dashed; }
+
+    .limit-info { margin-top: 8px; font-size: 13px; opacity: 0.8; line-height: 1.3; }
+    .limit-info span { font-weight: 600; }
+
+    /* Bloc Block Fuel (avitaillement) */
+    .uplift-box {
+      margin-top: 10px; padding: 14px; border-radius: 14px;
+      background-color: #181828; border: 1px solid #4b3f6b;
+    }
+
+    .verdict {
+      margin-top: 10px; padding: 12px; border-radius: 12px;
+      font-size: 19px; font-weight: 700; text-align: center;
+      border: 1px solid #3b3b4f; background-color: #14141f; color: #9a9ab0;
+    }
+    .verdict-ok { border-color: #2ecc71; background-color: #16241b; color: #7fffb0; }
+    .verdict-ko { border-color: #ff9f1a; background-color: #2a1e08; color: #ffcf80; }
+    .verdict-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; opacity: 0.85; }
+    .tol-note { margin-top: 8px; font-size: 13px; opacity: 0.75; line-height: 1.35; }
+    .ac-tol-hint { margin-top: 4px; margin-bottom: 4px; font-size: 12px; opacity: 0.6; line-height: 1.3; }
+
+    .footer { margin-top: 22px; font-size: 13px; text-align: center; opacity: 0.7; line-height: 1.4; }
+
+    @media (max-width: 480px) {
+      .app { padding: 20px 14px 32px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .result-row { font-size: 17px; }
+      input, select { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Block Fuel</h1>
+
+  <div class="group-title">Entrées (tonnes)</div>
+  <div class="row">
+    <label for="zfw">ZFW (T)</label>
+    <input id="zfw" class="state-adjust" type="text" inputmode="decimal" placeholder="ex. 180.5">
+  </div>
+
+  <div class="row">
+    <label for="k">K (coef &gt; 1, 3 décimales)</label>
+    <input id="k" class="state-edit" type="text" inputmode="decimal" placeholder="ex. 1.037">
+  </div>
+
+  <div class="grid-2">
+    <div class="row">
+      <label for="taxi">Taxi (T)</label>
+      <input id="taxi" class="state-edit" type="text" inputmode="decimal" placeholder="ex. 0.4">
+    </div>
+    <div class="row">
+      <label for="rfl">Remaining Fuel at Landing (T)</label>
+      <input id="rfl" class="state-adjust" type="text" inputmode="decimal" placeholder="ex. 7.0">
+    </div>
+  </div>
+
+  <div class="row">
+    <label for="block">Block Fuel (T)</label>
+    <input id="block" class="state-adjust" type="text" inputmode="decimal" placeholder="ex. 25.3">
+  </div>
+
+  <div class="buttons">
+    <button id="btnCalc">Calcul</button>
+    <button id="btnReset">Reset</button>
+  </div>
+
+  <div class="results" id="resultsBox">
+    <div class="result-row">
+      <div class="result-label">TOW (T)</div>
+      <div class="result-value state-result-value" id="mtow">–</div>
+      <input id="towLimit" class="limit-input" type="text" inputmode="decimal" placeholder="Lim TOW (T)">
+    </div>
+    <div class="result-row">
+      <div class="result-label">Trip Fuel (T)</div>
+      <div class="result-value state-result-value" id="trip">–</div>
+    </div>
+    <div class="result-row">
+      <div class="result-label">LAW (T)</div>
+      <div class="result-value state-result-value" id="mlw">–</div>
+      <input id="lawLimit" class="limit-input limit-input-law" type="text" inputmode="decimal" placeholder="Lim LAW (T)">
+    </div>
+    <div class="limit-info" id="limitInfo"></div>
+  </div>
+
+  <!-- ================= BLOCK FUEL CHECK (avitaillement) ================= -->
+  <div class="group-title">Block Fuel Check</div>
+  <div class="uplift-box">
+
+    <div class="row">
+      <label for="bfBlock">Block Fuel (T)</label>
+      <input id="bfBlock" class="state-uplift" type="text" inputmode="decimal" placeholder="ex. 25.3">
+    </div>
+
+    <div class="row">
+      <label for="fob">FOB before refueling (T)</label>
+      <input id="fob" class="state-uplift" type="text" inputmode="decimal" placeholder="ex. 3.2">
+    </div>
+
+    <div class="row">
+      <label for="dens">Density (kg/L)</label>
+      <input id="dens" class="state-uplift" type="text" inputmode="decimal" placeholder="ex. 0.795">
+    </div>
+
+    <div class="result-row">
+      <div class="result-label">Uplift Calculated (L)</div>
+      <div class="result-value state-result-value" id="upliftCalc">–</div>
+    </div>
+
+    <div class="row">
+      <label for="acType">Aircraft Type</label>
+      <select id="acType">
+        <option value="B777">B777</option>
+        <option value="B787">B787</option>
+        <option value="A320">A320</option>
+        <option value="custom">Custom</option>
+      </select>
+      <div class="ac-tol-hint" id="acTolHint"></div>
+    </div>
+
+    <div class="row" id="customTolRow" style="display:none;">
+      <label for="customTolPct">Custom Tolerance (%, symmetric, no cap)</label>
+      <input id="customTolPct" class="state-edit" type="text" inputmode="decimal" placeholder="ex. 5.0">
+    </div>
+
+    <div class="row">
+      <label for="actualUplift">Actual Uplift (L)</label>
+      <input id="actualUplift" class="state-uplift" type="text" inputmode="decimal" placeholder="ex. 27736">
+    </div>
+
+    <div class="verdict" id="verdict">Fill in Block Fuel, FOB, Density and Actual Uplift.</div>
+    <div class="tol-note" id="tolNote"></div>
+
+    <div class="buttons">
+      <button id="btnUpliftReset">Clear Block Fuel Check</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    ZFW + RFL = LAW · LAW × K = TOW · Trip = TOW − LAW · Block = Taxi + Trip + RFL<br>
+    Uplift Calculated = (Block Fuel − FOB) × 1000 ÷ Density
+  </div>
+</div>
+
+<script>
+let hasCalculated = false;
+
+function parseValOrNaN(id) {
+  const raw = document.getElementById(id).value.trim().replace(',', '.');
+  return raw === '' ? NaN : parseFloat(raw);
+}
+function fmt1(x) { return isNaN(x) ? '–' : x.toFixed(1); }
+function ceil1strict(x) {
+  if (isNaN(x)) return NaN;
+  const val = Math.round(x * 1000) / 1000;
+  const tenth = Math.round(val * 10) / 10;
+  if (Math.abs(val - tenth) < 1e-9) return tenth;
+  return Math.ceil(val * 10) / 10;
+}
+function normalizeInputValue(id, decimals = 1) {
+  const el = document.getElementById(id);
+  const num = parseValOrNaN(id);
+  if (isNaN(num)) return;
+  el.value = num.toFixed(decimals);
+}
+function setLocked(id, locked) {
+  const el = document.getElementById(id);
+  el.readOnly = locked;
+  el.classList.remove('state-edit', 'state-locked');
+  el.classList.add(locked ? 'state-locked' : 'state-edit');
+}
+
+const zfwEl = document.getElementById('zfw');
+const kEl = document.getElementById('k');
+const taxiEl = document.getElementById('taxi');
+const rflEl = document.getElementById('rfl');
+const blockEl = document.getElementById('block');
+const mtowEl = document.getElementById('mtow');
+const mlwEl = document.getElementById('mlw');
+const tripEl = document.getElementById('trip');
+const towLimEl = document.getElementById('towLimit');
+const lawLimEl = document.getElementById('lawLimit');
+const limitInfoEl = document.getElementById('limitInfo');
+
+function clearResults() {
+  mtowEl.textContent = '–'; mlwEl.textContent = '–'; tripEl.textContent = '–';
+}
+function resetLimitStyling() {
+  zfwEl.classList.remove('state-limited-tow', 'state-limited-law');
+  blockEl.classList.remove('state-limited-tow', 'state-limited-law');
+  rflEl.classList.remove('state-limited-law');
+  towLimEl.classList.remove('limit-input-muted');
+  lawLimEl.classList.remove('limit-input-muted');
+}
+function clearLimitsAndDerived() {
+  towLimEl.value = ''; lawLimEl.value = ''; zfwEl.value = ''; blockEl.value = '';
+  resetLimitStyling(); clearResults(); limitInfoEl.textContent = '';
+  hasCalculated = false;
+  syncBlockFuelCheck();
+}
+function handleLimitInputClear(el) {
+  if (el.value.trim() === '') clearLimitsAndDerived();
+}
+
+['rfl','block'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const otherId = id === 'rfl' ? 'block' : 'rfl';
+    document.getElementById(otherId).value = '';
+    towLimEl.value = ''; lawLimEl.value = '';
+    resetLimitStyling(); limitInfoEl.textContent = '';
+  });
+});
+
+zfwEl.addEventListener('input', () => {
+  if (!hasCalculated) return;
+  rflEl.value = ''; blockEl.value = '';
+  clearLimitsAndDerived();
+});
+
+[kEl, taxiEl, rflEl, blockEl].forEach(el => {
+  el.addEventListener('input', () => {
+    resetLimitStyling(); limitInfoEl.textContent = '';
+  });
+});
+
+document.getElementById('btnCalc').addEventListener('click', function () {
+  let zfw = parseValOrNaN('zfw');
+  let k = parseValOrNaN('k');
+  let taxi = parseValOrNaN('taxi');
+  let rfl = parseValOrNaN('rfl');
+  let block = parseValOrNaN('block');
+
+  if (isNaN(zfw) || isNaN(k) || isNaN(taxi)) {
+    alert('Renseigne ZFW, K et Taxi, puis soit RFL soit Block.');
+    return;
+  }
+  hasCalculated = true;
+
+  normalizeInputValue('zfw');
+  normalizeInputValue('k', 3);
+  normalizeInputValue('taxi');
+  if (!isNaN(rfl)) normalizeInputValue('rfl');
+  if (!isNaN(block)) normalizeInputValue('block');
+
+  zfw = parseValOrNaN('zfw'); k = parseValOrNaN('k'); taxi = parseValOrNaN('taxi');
+  rfl = parseValOrNaN('rfl'); block = parseValOrNaN('block');
+
+  setLocked('k', true); setLocked('taxi', true);
+
+  if (!isNaN(rfl)) {
+    const law = zfw + rfl, tow = law * k, trip = tow - law;
+    if (isNaN(block)) {
+      block = ceil1strict(taxi + trip + rfl);
+      blockEl.value = block.toFixed(1);
+    }
+    rflEl.value = rfl.toFixed(1);
+    mlwEl.textContent = fmt1(law);
+    mtowEl.textContent = fmt1(ceil1strict(tow));
+    tripEl.textContent = fmt1(trip);
+    syncBlockFuelCheck();
+    return;
+  }
+
+  if (isNaN(rfl) && !isNaN(block)) {
+    rfl = (block - taxi - zfw * (k - 1)) / k;
+    rflEl.value = rfl.toFixed(1);
+    const law = zfw + rfl, tow = law * k, trip = tow - law;
+    mlwEl.textContent = fmt1(law);
+    mtowEl.textContent = fmt1(ceil1strict(tow));
+    tripEl.textContent = fmt1(trip);
+    syncBlockFuelCheck();
+    return;
+  }
+  alert('Renseigne soit RFL, soit Block (une seule des deux).');
+});
+
+function computeTowFromTowLimit() {
+  const towLim = parseValOrNaN('towLimit');
+  return isNaN(towLim) ? NaN : towLim;
+}
+function computeTowFromLawLimit() {
+  const lawLim = parseValOrNaN('lawLimit'), k = parseValOrNaN('k');
+  return (isNaN(lawLim) || isNaN(k) || k <= 0) ? NaN : lawLim * k;
+}
+function applyLimits() {
+  resetLimitStyling(); limitInfoEl.textContent = '';
+  const zfw = parseValOrNaN('zfw'), k = parseValOrNaN('k'), taxi = parseValOrNaN('taxi');
+  let rfl = parseValOrNaN('rfl');
+  if (isNaN(zfw) || isNaN(k) || isNaN(taxi) || k <= 0 || isNaN(rfl)) return;
+
+  const towFromTow = computeTowFromTowLimit(), towFromLaw = computeTowFromLawLimit();
+  const hasTowLim = !isNaN(towFromTow), hasLawLim = !isNaN(towFromLaw);
+  if (!hasTowLim && !hasLawLim) return;
+  if (hasTowLim && !hasLawLim) { applyTowOnly(towFromTow, zfw, k, taxi, rfl); return; }
+  if (!hasTowLim && hasLawLim) { applyLawOnly(towFromLaw, zfw, k, taxi, rfl); return; }
+
+  if (towFromLaw <= towFromTow) {
+    applyLawOnly(towFromLaw, zfw, k, taxi, rfl, true);
+    towLimEl.classList.add('limit-input-muted');
+  } else {
+    applyTowOnly(towFromTow, zfw, k, taxi, rfl, true);
+    lawLimEl.classList.add('limit-input-muted');
+  }
+}
+function applyTowOnly(towMax, zfw, k, taxi, rfl, towDominant = true) {
+  const lawMax = towMax / k;
+  let zfwMax = Math.max(lawMax - rfl, 0);
+  let blockNew = ceil1strict(Math.max(towMax - zfwMax + taxi, 0));
+  zfwEl.value = zfwMax.toFixed(1);
+  blockEl.value = blockNew.toFixed(1);
+  if (towDominant) {
+    zfwEl.classList.add('state-limited-tow');
+    blockEl.classList.add('state-limited-tow');
+    limitInfoEl.innerHTML = '<span>ZFW Max</span> appliqué (limitation TOW).';
+  }
+  document.getElementById('btnCalc').click();
+}
+function applyLawOnly(towMax, zfw, k, taxi, rfl, lawDominant = true) {
+  const lawLimit = towMax / k;
+  let zfwNew = zfw, rflNew = rfl, blockNew;
+  const lawCurrent = zfw + rfl;
+  if (lawLimit < lawCurrent) {
+    zfwNew = Math.max(lawLimit - rfl, 0);
+    blockNew = Math.max(towMax - zfwNew + taxi, 0);
+  } else {
+    rflNew = Math.max(lawLimit - zfw, 0);
+    blockNew = Math.max(towMax - zfw + taxi, 0);
+  }
+  blockNew = ceil1strict(blockNew);
+  zfwEl.value = zfwNew.toFixed(1);
+  rflEl.value = rflNew.toFixed(1);
+  blockEl.value = blockNew.toFixed(1);
+  if (lawDominant) {
+    zfwEl.classList.add('state-limited-law');
+    rflEl.classList.add('state-limited-law');
+    blockEl.classList.add('state-limited-law');
+    limitInfoEl.innerHTML = '<span>Block Fuel Max</span> appliqué (limitation LAW).';
+  }
+  document.getElementById('btnCalc').click();
+}
+
+function onTowLimitChange() {
+  if (towLimEl.value.trim() === '') { handleLimitInputClear(towLimEl); return; }
+  normalizeInputValue('towLimit'); applyLimits();
+}
+function onLawLimitChange() {
+  if (lawLimEl.value.trim() === '') { handleLimitInputClear(lawLimEl); return; }
+  normalizeInputValue('lawLimit'); applyLimits();
+}
+towLimEl.addEventListener('blur', onTowLimitChange);
+towLimEl.addEventListener('keydown', e => { if (e.key==='Enter'){ e.preventDefault(); onTowLimitChange(); }});
+lawLimEl.addEventListener('blur', onLawLimitChange);
+lawLimEl.addEventListener('keydown', e => { if (e.key==='Enter'){ e.preventDefault(); onLawLimitChange(); }});
+
+document.getElementById('btnReset').addEventListener('click', function () {
+  hasCalculated = false;
+  ['zfw','k','taxi','rfl','block','towLimit','lawLimit'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    if (id === 'k' || id === 'taxi') el.readOnly = false;
+  });
+  zfwEl.className = 'state-adjust';
+  rflEl.className = 'state-adjust';
+  blockEl.className = 'state-adjust';
+  kEl.className = 'state-edit';
+  taxiEl.className = 'state-edit';
+  resetLimitStyling(); clearResults(); limitInfoEl.textContent = '';
+  resetBlockFuelCheck();
+});
+
+/* =======================================================
+   BLOCK FUEL CHECK — GEN GOM 3.1
+   Uplift Calculated (L) = (Block Fuel − FOB) × 1000 ÷ Density
+   Actual Uplift (L)     = read from the delivery ticket
+   Tolerance: smaller of (5% of calculated uplift) and the
+   flat cap for the aircraft type, cap differing between
+   over-delivery and under-delivery.
+   ======================================================= */
+
+const AC_CAPS = {
+  B777: { over: 2000, under: 1000 },
+  B787: { over: 1500, under: 800  },
+  A320: { over: 600,  under: 250  }
+};
+const CUSTOM_DEFAULT_PCT = 5.0;
+
+const bfBlockEl     = document.getElementById('bfBlock');
+const fobEl         = document.getElementById('fob');
+const densEl        = document.getElementById('dens');
+const upliftCalcEl  = document.getElementById('upliftCalc');
+const acTypeEl      = document.getElementById('acType');
+const customRowEl   = document.getElementById('customTolRow');
+const customPctEl   = document.getElementById('customTolPct');
+const actualUpliftEl= document.getElementById('actualUplift');
+const verdictEl     = document.getElementById('verdict');
+const tolNoteEl     = document.getElementById('tolNote');
+const acTolHintEl   = document.getElementById('acTolHint');
+
+// discreet static reminder of the +/- caps for the selected aircraft,
+// shown as soon as a type is picked (doesn't need Block/FOB/Density filled in)
+function updateAcTolHint() {
+  if (acTypeEl.value === 'custom') {
+    let pct = parseValOrNaN('customTolPct');
+    if (isNaN(pct) || pct < 0) pct = CUSTOM_DEFAULT_PCT;
+    acTolHintEl.textContent = 'Tolérance : ± ' + pct.toFixed(1) + ' % (personnalisé, sans plafond)';
+    return;
+  }
+  const caps = AC_CAPS[acTypeEl.value];
+  if (!caps) { acTolHintEl.textContent = ''; return; }
+  acTolHintEl.textContent = 'Tolérance ' + acTypeEl.value + ' : − ' + caps.under
+    + ' kg / + ' + caps.over + ' kg (max 5 %)';
+}
+
+function saveUpliftPrefs() {
+  try {
+    localStorage.setItem('bf_ac_type', acTypeEl.value);
+    localStorage.setItem('bf_custom_pct', customPctEl.value.trim());
+  } catch (e) {}
+}
+function loadUpliftPrefs() {
+  let type = null, pct = null;
+  try {
+    type = localStorage.getItem('bf_ac_type');
+    pct  = localStorage.getItem('bf_custom_pct');
+  } catch (e) {}
+  if (type === 'custom' || AC_CAPS[type]) acTypeEl.value = type;
+  customPctEl.value = (pct !== null && pct !== '') ? pct : CUSTOM_DEFAULT_PCT.toFixed(1);
+}
+function updateCustomRowVisibility() {
+  customRowEl.style.display = (acTypeEl.value === 'custom') ? 'flex' : 'none';
+}
+acTypeEl.addEventListener('change', () => {
+  updateCustomRowVisibility(); updateAcTolHint(); saveUpliftPrefs(); runBlockFuelCheck();
+});
+customPctEl.addEventListener('input', () => { updateAcTolHint(); saveUpliftPrefs(); runBlockFuelCheck(); });
+customPctEl.addEventListener('blur', () => {
+  if (customPctEl.value.trim() !== '') normalizeInputValue('customTolPct');
+  updateAcTolHint(); saveUpliftPrefs(); runBlockFuelCheck();
+});
+
+// keep the Block Fuel Check's own Block Fuel field synced from the calc above,
+// but let it be overridden by hand
+let bfBlockManual = false;
+bfBlockEl.addEventListener('input', () => {
+  bfBlockManual = bfBlockEl.value.trim() !== '';
+  bfBlockEl.classList.toggle('state-derived', false); // stays purple/editable either way
+  runBlockFuelCheck();
+});
+blockEl.addEventListener('input', () => {
+  if (!bfBlockManual && blockEl.value.trim() !== '') {
+    bfBlockEl.value = blockEl.value;
+  }
+  runBlockFuelCheck();
+});
+
+function syncBlockFuelCheck() {
+  if (!bfBlockManual && blockEl.value.trim() !== '') {
+    bfBlockEl.value = blockEl.value;
+  }
+  runBlockFuelCheck();
+}
+
+fobEl.addEventListener('input', runBlockFuelCheck);
+densEl.addEventListener('input', runBlockFuelCheck);
+actualUpliftEl.addEventListener('input', runBlockFuelCheck);
+
+// returns { overT, underT, label } tonnes of tolerance around the calculated uplift
+function computeToleranceT(upliftCalcT) {
+  if (isNaN(upliftCalcT) || upliftCalcT <= 0) return null;
+
+  if (acTypeEl.value === 'custom') {
+    let pct = parseValOrNaN('customTolPct');
+    if (isNaN(pct) || pct < 0) pct = CUSTOM_DEFAULT_PCT;
+    const tol = upliftCalcT * pct / 100;
+    return { overT: tol, underT: tol, label: pct.toFixed(1) + '% (custom, no cap)' };
+  }
+  const caps = AC_CAPS[acTypeEl.value];
+  if (!caps) return null;
+  const pctT = upliftCalcT * 0.05;
+  return {
+    overT: Math.min(pctT, caps.over / 1000),
+    underT: Math.min(pctT, caps.under / 1000),
+    label: acTypeEl.value + ': 5% capped at ' + caps.under + ' kg under / ' + caps.over + ' kg over'
+  };
+}
+
+function runBlockFuelCheck() {
+  const blockT = parseValOrNaN('bfBlock');
+  const fobT   = parseValOrNaN('fob');
+  const dens   = parseValOrNaN('dens');
+  const actualL = parseValOrNaN('actualUplift');
+
+  upliftCalcEl.textContent = '–';
+  verdictEl.className = 'verdict';
+  tolNoteEl.textContent = '';
+
+  if (isNaN(blockT) || isNaN(fobT) || isNaN(dens) || dens <= 0) {
+    verdictEl.textContent = 'Fill in Block Fuel, FOB, Density and Actual Uplift.';
+    return;
+  }
+
+  const upliftCalcT = blockT - fobT;
+  if (upliftCalcT <= 0) {
+    verdictEl.textContent = 'Uplift Calculated ≤ 0 — check Block Fuel and FOB.';
+    return;
+  }
+  const upliftCalcL = upliftCalcT * 1000 / dens;
+  upliftCalcEl.textContent = Math.round(upliftCalcL).toLocaleString('fr-FR');
+
+  const tol = computeToleranceT(upliftCalcT);
+  if (tol) {
+    tolNoteEl.textContent = 'Tolerance: ' + tol.label + ' → −' + tol.underT.toFixed(3)
+      + ' T / +' + tol.overT.toFixed(3) + ' T around Uplift Calculated.';
+  }
+
+  if (isNaN(actualL)) {
+    verdictEl.textContent = 'Enter Actual Uplift to check tolerance.';
+    return;
+  }
+  if (!tol) {
+    verdictEl.textContent = 'Choose an aircraft type.';
+    return;
+  }
+
+  const actualT = actualL * dens / 1000;
+  const diffT = actualT - upliftCalcT;
+  const diffPct = (diffT / upliftCalcT) * 100;
+  const sign = diffT >= 0 ? '+' : '−';
+  const withinTol = diffT >= 0 ? (diffT <= tol.overT + 1e-9) : (Math.abs(diffT) <= tol.underT + 1e-9);
+
+  const line1 = sign + Math.abs(diffPct).toFixed(2) + ' % (' + sign + Math.abs(diffT).toFixed(3) + ' T)';
+
+  if (withinTol) {
+    verdictEl.className = 'verdict verdict-ok';
+    verdictEl.innerHTML = line1 + '<span class="verdict-sub">Within tolerance</span>';
+  } else {
+    const bound = diffT >= 0 ? tol.overT : tol.underT;
+    const excessT = Math.abs(diffT) - bound;
+    verdictEl.className = 'verdict verdict-ko';
+    verdictEl.innerHTML = line1 + '<span class="verdict-sub">Tolerance exceeded by '
+      + excessT.toFixed(3) + ' T (' + Math.round(excessT*1000) + ' kg)</span>';
+  }
+}
+
+function resetBlockFuelCheck() {
+  ['bfBlock','fob','dens','actualUplift'].forEach(id => document.getElementById(id).value = '');
+  bfBlockManual = false;
+  runBlockFuelCheck();
+}
+document.getElementById('btnUpliftReset').addEventListener('click', resetBlockFuelCheck);
+
+loadUpliftPrefs();
+updateCustomRowVisibility();
+updateAcTolHint();
+runBlockFuelCheck();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed', err));
+  });
+}
+</script>
+</body>
+</html>
