@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#101018">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="bf-icon-192.png">
 
   <style>
     body {
@@ -78,7 +78,7 @@
     .state-limited-law { border-color: #4ec3ff !important; background-color: #082234 !important; }
 
     /* violet = bloc Block Fuel avitaillement (mesures sol) */
-    .state-uplift { border-color: #a78bfa; background-color: #1b1730; }
+    .state-uplift { border-color: #2dd4bf; background-color: #0e211e; }
     /* gris = valeur dérivée, non saisie directement */
     .state-derived { border-color: #55556a; background-color: #14141f; color: #d8d8ea; }
 
@@ -126,7 +126,7 @@
     /* Bloc Block Fuel (avitaillement) */
     .uplift-box {
       margin-top: 10px; padding: 14px; border-radius: 14px;
-      background-color: #181828; border: 1px solid #4b3f6b;
+      background-color: #181828; border: 1px solid #2b4a46;
     }
 
     .verdict {
@@ -142,6 +142,32 @@
 
     .footer { margin-top: 22px; font-size: 13px; text-align: center; opacity: 0.7; line-height: 1.4; }
 
+    .tabbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      background-color: #171725;
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: #9a9ab0;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background-color: #2e2e3c;
+      color: #ffffff;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
     @media (max-width: 480px) {
       .app { padding: 20px 14px 32px; }
       .grid-2 { grid-template-columns: 1fr; }
@@ -153,6 +179,13 @@
 <body>
 <div class="app">
   <h1>Block Fuel</h1>
+
+  <div class="tabbar">
+    <button class="tab-btn active" id="tabBtnFlight">Flight Fuel</button>
+    <button class="tab-btn" id="tabBtnUplift">Uplift Check</button>
+  </div>
+
+  <div class="tab-panel active" id="tabFlightFuel">
 
   <div class="group-title">Entrées (tonnes)</div>
   <div class="row">
@@ -203,6 +236,14 @@
     </div>
     <div class="limit-info" id="limitInfo"></div>
   </div>
+
+  <div class="footer">
+    ZFW + RFL = LAW · LAW × K = TOW · Trip = TOW − LAW · Block = Taxi + Trip + RFL
+  </div>
+
+  </div><!-- /tabFlightFuel -->
+
+  <div class="tab-panel" id="tabUpliftCheck">
 
   <!-- ================= BLOCK FUEL CHECK (avitaillement) ================= -->
   <div class="group-title">Block Fuel Check</div>
@@ -258,13 +299,35 @@
   </div>
 
   <div class="footer">
-    ZFW + RFL = LAW · LAW × K = TOW · Trip = TOW − LAW · Block = Taxi + Trip + RFL<br>
     Uplift Calculated = (Block Fuel − FOB) × 1000 ÷ Density
   </div>
+
+  </div><!-- /tabUpliftCheck -->
 </div>
 
 <script>
 let hasCalculated = false;
+
+// ---- Tab switching ----
+const tabBtnFlight = document.getElementById('tabBtnFlight');
+const tabBtnUplift = document.getElementById('tabBtnUplift');
+const tabFlightFuel = document.getElementById('tabFlightFuel');
+const tabUpliftCheck = document.getElementById('tabUpliftCheck');
+
+function showTab(name) {
+  const isFlight = name === 'flight';
+  tabBtnFlight.classList.toggle('active', isFlight);
+  tabBtnUplift.classList.toggle('active', !isFlight);
+  tabFlightFuel.classList.toggle('active', isFlight);
+  tabUpliftCheck.classList.toggle('active', !isFlight);
+  try { localStorage.setItem('bf_active_tab', name); } catch (e) {}
+}
+tabBtnFlight.addEventListener('click', () => showTab('flight'));
+tabBtnUplift.addEventListener('click', () => showTab('uplift'));
+try {
+  const saved = localStorage.getItem('bf_active_tab');
+  if (saved === 'uplift') showTab('uplift');
+} catch (e) {}
 
 function parseValOrNaN(id) {
   const raw = document.getElementById(id).value.trim().replace(',', '.');
