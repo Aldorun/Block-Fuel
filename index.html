@@ -66,12 +66,13 @@
     }
     .select-wrap { position: relative; }
     .select-wrap::after {
-      content: '▾';
+      content: '⌄';
       position: absolute;
       right: 14px;
       top: 50%;
-      transform: translateY(calc(-50% + 3px));
-      font-size: 16px;
+      transform: translateY(-60%);
+      font-size: 28px;
+      font-weight: 700;
       color: #9a9ab0;
       pointer-events: none;
     }
@@ -288,7 +289,7 @@
     </div>
 
     <div class="row">
-      <label for="acType">Aircraft Type</label>
+      <label for="acType">Choose aircraft type</label>
       <div class="select-wrap">
         <select id="acType">
           <option value="B777">B777</option>
