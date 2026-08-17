@@ -59,6 +59,24 @@
       transition: border-color 0.15s ease, background-color 0.15s ease;
     }
     select { font-size: 16px; }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: none;
+    }
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(calc(-50% + 3px));
+      font-size: 16px;
+      color: #9a9ab0;
+      pointer-events: none;
+    }
+    .select-wrap select { padding-right: 34px; width: 100%; box-sizing: border-box; }
+    .result-value-lg { font-size: 26px; }
     input::placeholder { color: #7f7f9a; }
     input:focus, select:focus {
       outline: none;
@@ -266,17 +284,19 @@
 
     <div class="result-row">
       <div class="result-label">Uplift Calculated (L)</div>
-      <div class="result-value state-result-value" id="upliftCalc">–</div>
+      <div class="result-value state-result-value result-value-lg" id="upliftCalc">–</div>
     </div>
 
     <div class="row">
       <label for="acType">Aircraft Type</label>
-      <select id="acType">
-        <option value="B777">B777</option>
-        <option value="B787">B787</option>
-        <option value="A320">A320</option>
-        <option value="custom">Custom</option>
-      </select>
+      <div class="select-wrap">
+        <select id="acType">
+          <option value="B777">B777</option>
+          <option value="B787">B787</option>
+          <option value="A320">A320</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
       <div class="ac-tol-hint" id="acTolHint"></div>
     </div>
 
